@@ -88,48 +88,61 @@ function getDate() {
         data = JSON.parse(xhr.responseText);
         //成功抓到資料後，渲染一次List
         renderList("臺北市");
+        addMarker();
+        addCountyList()
     }
 }
 
 //顯示列表、地圖藥局標示
-function renderList(city) {
+function renderList(city, town) {
     var ary = data.features;
     var str = "";
+
+    for (var i = 0; i < ary.length; i++) {
+        var pharmacyName = ary[i].properties.name; //藥局名稱     
+        var maskAdult = ary[i].properties.mask_adult; //成人口罩數量
+        var maskChild = ary[i].properties.mask_child; //兒童口罩數量
+        if (ary[i].properties.county == city) {
+            str += "<li>" + pharmacyName +
+                "<br><span class='adult'>成人口罩：" + maskAdult +
+                "</span><span class='child'>兒童口罩：" + maskChild + "</span>" + "</li>";
+        }
+    }
+    document.querySelector(".list").innerHTML = str;
+}
+
+function addMarker() {
     //新增圖層，這圖曾專門放icon群組
     var markers = new L.MarkerClusterGroup({
         disableClusteringAtZoom: 18
     }).addTo(mymap);
 
+    var ary = data.features;
     for (var i = 0; i < ary.length; i++) {
         var pharmacyName = ary[i].properties.name; //藥局名稱        
         var maskAdult = ary[i].properties.mask_adult; //成人口罩數量
         var maskChild = ary[i].properties.mask_child; //兒童口罩數量
         var lat = ary[i].geometry.coordinates[1]; //經度
-        var lng = ary[i].geometry.coordinates[0]; //緯度
-        if (ary[i].properties.county == city) {
-            str += "<li>" + pharmacyName +
-                "<span class='adult'>成人口罩：" + maskAdult +
-                "</span><span class='child'>兒童口罩：" + maskChild + "</span>" + "</li>";
-            //加上一個marker，並設定他的座標，同時將這座標放入對應的地圖裡。
-            //bindPopup針對這個marker，加上HTML內容進去
-            //openPopup預設要把他開啟
-            if (maskAdult == 0 || maskChild == 0) {
-                mask = redIcon;
-            } else if (maskAdult < 100 || maskChild < 100) {
-                mask = orangeIcon;
-            } else {
-                mask = greenIcon;
-            }
-            //使用彙整標示點套件markers.addLayer，在該圖層上，加上各個marker
-            markers.addLayer(L.marker([lat, lng], {
-                    icon: mask
-                })
-                .bindPopup("<h1>" + pharmacyName + "</h1><p>成人口罩：" + maskAdult + "<br>兒童口罩：" + maskChild + "</p>")
-                .openPopup());
+        var lng = ary[i].geometry.coordinates[0]; //緯度       
+
+        //加上一個marker，並設定他的座標，同時將這座標放入對應的地圖裡。
+        //bindPopup針對這個marker，加上HTML內容進去
+        //openPopup預設要把他開啟
+        if (maskAdult == 0 || maskChild == 0) {
+            mask = redIcon;
+        } else if (maskAdult < 100 || maskChild < 100) {
+            mask = orangeIcon;
+        } else {
+            mask = greenIcon;
         }
+        //使用彙整標示點套件markers.addLayer，在該圖層上，加上各個marker
+        markers.addLayer(L.marker([lat, lng], {
+                icon: mask
+            })
+            .bindPopup("<h1>" + pharmacyName + "</h1><p>成人口罩：" + maskAdult + "<br>兒童口罩：" + maskChild + "</p>")
+            .openPopup());
     }
-    document.querySelector(".list").innerHTML = str;
-    map.addLayer(markers); //彙整套件使用，放在標示後
+    mymap.addLayer(markers); //彙整套件使用，放在標示後
 }
 
 function inin() {
@@ -139,11 +152,6 @@ function inin() {
 
 inin();
 
-//選單變換監聽事件
-document.querySelector(".area").addEventListener("change", function (e) {
-    renderList(e.target.value)
-})
-
 //設定一個地圖，把這地圖定位在#map，先定位setView座標，zoom定位13
 var mymap = L.map('map').setView([25.0329712, 121.564763], 16);
 
@@ -151,3 +159,44 @@ var mymap = L.map('map').setView([25.0329712, 121.564763], 16);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(mymap);
+
+//縣市選單變換監聽事件
+document.querySelector(".selectCounty").addEventListener("change", addTownList)
+document.querySelector(".selectTown").addEventListener("change", function () {
+    console.log(selectCity.value + ":" + e.target.value)
+
+})
+
+//縣市選單
+var countySelector = document.querySelector('.selectCounty');
+var townSelector = document.querySelector('.selectTown');
+
+function addCountyList() {
+    var allCounty = [];
+    for (var i = 0; i < data.features.length; i++) {
+        var countyName = data.features[i].properties.county;
+        //和陣列內不重複的才放進陣列並添加到下拉選單
+        if (allCounty.indexOf(countyName) == -1 && countyName !== '') {
+            allCounty.push(countyName);
+            countySelector.options.add(new Option(countyName, countyName));
+        }
+    }
+}
+
+//點擊縣市選單觸發事件，加入鄉鎮選單
+function addTownList(e) {
+    var allTown = [];
+    //鄉鎮區選單清空。
+    townSelector.options.length = 0;
+    for (var i = 0; i < data.features.length; i++) {
+        var TownName = data.features[i].properties.town;
+        //和陣列內不重複的才放進陣列並添加到下拉選單
+        if (e.target.value == data.features[i].properties.county) {
+            if (allTown.indexOf(TownName) == -1 && TownName !== '') {
+                allTown.push(TownName);
+                townSelector.options.add(new Option(TownName, TownName));
+            }
+        }
+    }
+    renderList(e.target.value, townSelector.value)
+}
