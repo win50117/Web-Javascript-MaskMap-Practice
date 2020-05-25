@@ -87,7 +87,7 @@ function getDate() {
     xhr.onload = function () {
         data = JSON.parse(xhr.responseText);
         //成功抓到資料後，渲染一次List
-        renderList("臺北市");
+        renderList("臺北市", "北投區");
         addMarker();
         addCountyList()
     }
@@ -102,7 +102,7 @@ function renderList(city, town) {
         var pharmacyName = ary[i].properties.name; //藥局名稱     
         var maskAdult = ary[i].properties.mask_adult; //成人口罩數量
         var maskChild = ary[i].properties.mask_child; //兒童口罩數量
-        if (ary[i].properties.county == city) {
+        if (ary[i].properties.county == city && ary[i].properties.town == town) {
             str += "<li>" + pharmacyName +
                 "<br><span class='adult'>成人口罩：" + maskAdult +
                 "</span><span class='child'>兒童口罩：" + maskChild + "</span>" + "</li>";
@@ -160,16 +160,17 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(mymap);
 
-//縣市選單變換監聽事件
-document.querySelector(".selectCounty").addEventListener("change", addTownList)
-document.querySelector(".selectTown").addEventListener("change", function () {
-    console.log(selectCity.value + ":" + e.target.value)
 
-})
 
 //縣市選單
 var countySelector = document.querySelector('.selectCounty');
 var townSelector = document.querySelector('.selectTown');
+
+//縣市選單變換監聽事件
+document.querySelector(".selectCounty").addEventListener("change", addTownList)
+document.querySelector(".selectTown").addEventListener("change", function (e) {
+    renderList(countySelector.value, e.target.value)
+})
 
 function addCountyList() {
     var allCounty = [];
