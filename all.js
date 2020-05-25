@@ -1,5 +1,38 @@
 //存放json資料
 var data;
+
+// 1. 定義 marker 顏色， 把這一段放在 getData() 前面
+var mask;
+// 2. 我們取出綠、 橘、 紅三個顏色來代表口罩數量的不同狀態
+const greenIcon = new L.Icon({
+    iconUrl: 'https://cdn.rawgit.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+    // 3. 只要更改上面這一段的 green.png 成專案裡提供的顏色如： red.png， 就可以更改 marker 的顏色
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
+
+const orangeIcon = new L.Icon({
+    iconUrl: 'https://cdn.rawgit.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
+
+const redIcon = new L.Icon({
+    iconUrl: 'https://cdn.rawgit.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
+
+
 //顯示日期資料
 function renderDay() {
     var date = new Date();
@@ -58,18 +91,45 @@ function getDate() {
     }
 }
 
-//顯示列表
+//顯示列表、地圖藥局標示
 function renderList(city) {
     var ary = data.features;
     var str = "";
+    //新增圖層，這圖曾專門放icon群組
+    var markers = new L.MarkerClusterGroup({
+        disableClusteringAtZoom: 18
+    }).addTo(mymap);
+
     for (var i = 0; i < ary.length; i++) {
+        var pharmacyName = ary[i].properties.name; //藥局名稱        
+        var maskAdult = ary[i].properties.mask_adult; //成人口罩數量
+        var maskChild = ary[i].properties.mask_child; //兒童口罩數量
+        var lat = ary[i].geometry.coordinates[1]; //經度
+        var lng = ary[i].geometry.coordinates[0]; //緯度
         if (ary[i].properties.county == city) {
-            str += "<li>" + ary[i].properties.name +
-                "<span class='adult'>成人口罩：" + ary[i].properties.mask_adult +
-                "</span><span class='child'>兒童口罩：" + ary[i].properties.mask_child + "</span>" + "</li>"
+            str += "<li>" + pharmacyName +
+                "<span class='adult'>成人口罩：" + maskAdult +
+                "</span><span class='child'>兒童口罩：" + maskChild + "</span>" + "</li>";
+            //加上一個marker，並設定他的座標，同時將這座標放入對應的地圖裡。
+            //bindPopup針對這個marker，加上HTML內容進去
+            //openPopup預設要把他開啟
+            if (maskAdult == 0 || maskChild == 0) {
+                mask = redIcon;
+            } else if (maskAdult < 100 || maskChild < 100) {
+                mask = orangeIcon;
+            } else {
+                mask = greenIcon;
+            }
+            //使用彙整標示點套件markers.addLayer，在該圖層上，加上各個marker
+            markers.addLayer(L.marker([lat, lng], {
+                    icon: mask
+                })
+                .bindPopup("<h1>" + pharmacyName + "</h1><p>成人口罩：" + maskAdult + "<br>兒童口罩：" + maskChild + "</p>")
+                .openPopup());
         }
     }
     document.querySelector(".list").innerHTML = str;
+    map.addLayer(markers); //彙整套件使用，放在標示後
 }
 
 function inin() {
