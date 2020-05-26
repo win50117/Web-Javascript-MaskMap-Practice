@@ -156,7 +156,7 @@ function renderList(city, town) {
         var phone = ary[i].properties.phone; //電話
         if (ary[i].properties.county == city && ary[i].properties.town == town) {
             str += "<ul class='listContent' data-lat=" + lat + " data-lng=" + lng + ">";
-            str += "<li> " + pharmacyName + "</li>"
+            str += "<li>" + pharmacyName + "</li>"
             str += "<p>" + address + "</p>";
             str += "<p>" + phone + "</p>";
             str += "<span class='adult'>成人口罩：" + maskAdult;
