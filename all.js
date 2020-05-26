@@ -1,5 +1,10 @@
-//存放json資料
-var data;
+//設定一個地圖，把這地圖定位在#map，先定位setView座標，zoom定位13
+var mymap = L.map('map').setView([25.0329712, 121.564763], 16);
+
+//tileLayer你要用誰的圖資
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(mymap);
 
 // 1. 定義 marker 顏色， 把這一段放在 getData() 前面
 var mask;
@@ -32,6 +37,21 @@ const redIcon = new L.Icon({
     shadowSize: [41, 41]
 });
 
+//存放json資料
+var data;
+
+function getDate() {
+    var xhr = new XMLHttpRequest();
+    xhr.open("get", "https://raw.githubusercontent.com/kiang/pharmacies/master/json/points.json")
+    xhr.send();
+    xhr.onload = function () {
+        data = JSON.parse(xhr.responseText);
+        //成功抓到資料後，渲染一次List
+        addMarker();
+        renderList("臺北市", "北投區");
+        addCountyList()
+    }
+}
 
 //顯示日期資料
 function renderDay() {
@@ -80,43 +100,18 @@ function judgeDayChinese(day) {
     }
 }
 
-function getDate() {
-    var xhr = new XMLHttpRequest();
-    xhr.open("get", "https://raw.githubusercontent.com/kiang/pharmacies/master/json/points.json")
-    xhr.send();
-    xhr.onload = function () {
-        data = JSON.parse(xhr.responseText);
-        //成功抓到資料後，渲染一次List
-        renderList("臺北市", "北投區");
-        addMarker();
-        addCountyList()
-    }
+function inin() {
+    renderDay();
+    getDate();
 }
+inin();
 
-//顯示列表、地圖藥局標示
-function renderList(city, town) {
-    var ary = data.features;
-    var str = "";
-
-    for (var i = 0; i < ary.length; i++) {
-        var pharmacyName = ary[i].properties.name; //藥局名稱     
-        var maskAdult = ary[i].properties.mask_adult; //成人口罩數量
-        var maskChild = ary[i].properties.mask_child; //兒童口罩數量
-        if (ary[i].properties.county == city && ary[i].properties.town == town) {
-            str += "<li>" + pharmacyName +
-                "<br><span class='adult'>成人口罩：" + maskAdult +
-                "</span><span class='child'>兒童口罩：" + maskChild + "</span>" + "</li>";
-        }
-    }
-    document.querySelector(".list").innerHTML = str;
-}
+//新增圖層，這圖曾專門放icon群組
+var markers = new L.MarkerClusterGroup({
+    disableClusteringAtZoom: 18
+}).addTo(mymap);
 
 function addMarker() {
-    //新增圖層，這圖曾專門放icon群組
-    var markers = new L.MarkerClusterGroup({
-        disableClusteringAtZoom: 18
-    }).addTo(mymap);
-
     var ary = data.features;
     for (var i = 0; i < ary.length; i++) {
         var pharmacyName = ary[i].properties.name; //藥局名稱        
@@ -145,21 +140,54 @@ function addMarker() {
     mymap.addLayer(markers); //彙整套件使用，放在標示後
 }
 
-function inin() {
-    renderDay();
-    getDate();
+//顯示列表、地圖藥局標示
+function renderList(city, town) {
+    var ary = data.features;
+    var str = "";
+    var dataCount = 0; //紀錄有幾筆資料
+
+    for (var i = 0; i < ary.length; i++) {
+        var pharmacyName = ary[i].properties.name; //藥局名稱     
+        var maskAdult = ary[i].properties.mask_adult; //成人口罩數量
+        var maskChild = ary[i].properties.mask_child; //兒童口罩數量
+        var lat = ary[i].geometry.coordinates[1]; //經度
+        var lng = ary[i].geometry.coordinates[0]; //緯度   
+        var address = ary[i].properties.address; //地址
+        var phone = ary[i].properties.phone; //電話
+        if (ary[i].properties.county == city && ary[i].properties.town == town) {
+            str += "<ul class='listContent' data-lat=" + lat + " data-lng=" + lng + ">";
+            str += "<li> " + pharmacyName + "</li>"
+            str += "<p>" + address + "</p>";
+            str += "<p>" + phone + "</p>";
+            str += "<span class='adult'>成人口罩：" + maskAdult;
+            str += "</span><span class='child'>兒童口罩：" + maskChild + "</span>";
+            str += "</ul>";
+            dataCount++;
+        }
+    }
+    document.querySelector(".list").innerHTML = str;
+
+    //點選列表，定位到標示點。
+    var point = document.querySelectorAll(".listContent");
+    gotoPoint(point, dataCount);
 }
 
-inin();
-
-//設定一個地圖，把這地圖定位在#map，先定位setView座標，zoom定位13
-var mymap = L.map('map').setView([25.0329712, 121.564763], 16);
-
-//tileLayer你要用誰的圖資
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-}).addTo(mymap);
-
+//點選列表，從dataset抓座標資料，定位到標示點。
+function gotoPoint(point, dataCount) {
+    for (var i = 0; i < dataCount; i++) {
+        point[i].addEventListener('click', function (e) {
+            Lat = Number(e.currentTarget.dataset.lat);
+            Lng = Number(e.currentTarget.dataset.lng);
+            mymap.setView([Lat, Lng], 18);
+            markers.eachLayer(function (layer) {
+                const layerLatLng = layer.getLatLng();
+                if (layerLatLng.lat == Lat && layerLatLng.lng == Lng) {
+                    layer.openPopup();
+                }
+            });
+        })
+    }
+}
 
 
 //縣市選單
