@@ -94,7 +94,7 @@ function judgeDayChinese(day) {
         case 6:
             return "六";
             break;
-        case 7:
+        case 0:
             return "日";
             break;
     }
